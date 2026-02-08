@@ -1,0 +1,222 @@
+{
+  "meta": {
+    "version": 1,
+    "createdAt": "2026-02-07T22:22:31.854Z",
+    "updatedAt": "2026-02-07T22:22:31.854Z"
+  },
+  "users": [
+    {
+      "id": "usr_admin_01",
+      "role": "admin",
+      "fullName": "Отар (владелец)",
+      "phone": "+7 903 111-19-89",
+      "createdAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "usr_seller_01",
+      "role": "seller",
+      "fullName": "Менеджер ОптТех",
+      "phone": "+7 925 678-02-89",
+      "storeId": "store_opttech",
+      "createdAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "usr_buyer_01",
+      "role": "buyer",
+      "fullName": "Магазин Ритейл Плюс",
+      "phone": "+7 926 555-40-20",
+      "createdAt": "2026-02-07T22:22:31.854Z"
+    }
+  ],
+  "stores": [
+    {
+      "id": "store_opttech",
+      "name": "ОптТех Москва",
+      "city": "Москва",
+      "address": "ТК Южные Ворота, 12 ряд, место 34",
+      "description": "Смартфоны, гаджеты и аксессуары для розницы и маркетплейс‑селлеров. Отгрузка в день оплаты.",
+      "phone": "+7 (925) 678-02-89",
+      "minOrderRub": 25000,
+      "deliveryDays": 2,
+      "rating": 4.8,
+      "verified": true,
+      "logoUrl": "https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=180&q=80",
+      "coverUrl": "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1400&q=80",
+      "categories": [
+        "Электроника",
+        "Аксессуары",
+        "Смарт‑дом"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "store_textile_hub",
+      "name": "Textile Hub Иваново",
+      "city": "Иваново",
+      "address": "ул. Кузнецова, 24, склад 5",
+      "description": "Домашний текстиль и постельные комплекты крупным оптом. Работаем с ЭДО и маркировкой.",
+      "phone": "+7 (4932) 21-55-90",
+      "minOrderRub": 18000,
+      "deliveryDays": 3,
+      "rating": 4.7,
+      "verified": true,
+      "logoUrl": "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=180&q=80",
+      "coverUrl": "https://images.unsplash.com/photo-1616627561839-074385245ff6?auto=format&fit=crop&w=1400&q=80",
+      "categories": [
+        "Текстиль",
+        "Дом",
+        "HoReCa"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "store_beauty_pro",
+      "name": "Beauty Profi SPB",
+      "city": "Санкт‑Петербург",
+      "address": "Лиговский пр., 81, корпус B",
+      "description": "Профессиональная косметика, уход и расходники для салонов красоты и офлайн-магазинов.",
+      "phone": "+7 (812) 411-45-55",
+      "minOrderRub": 20000,
+      "deliveryDays": 2,
+      "rating": 4.9,
+      "verified": true,
+      "logoUrl": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=180&q=80",
+      "coverUrl": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1400&q=80",
+      "categories": [
+        "Косметика",
+        "Уход",
+        "Расходники"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "prd_001",
+      "storeId": "store_opttech",
+      "name": "Смартфон X-Note 128GB",
+      "sku": "XNOTE-128-BLK",
+      "category": "Электроника",
+      "priceRub": 14200,
+      "minQty": 5,
+      "stock": 120,
+      "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=700&q=80",
+      "description": "Надёжная модель для массовых продаж в рознице.",
+      "tags": [
+        "Хит",
+        "5G"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z",
+      "updatedAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "prd_002",
+      "storeId": "store_opttech",
+      "name": "Наушники AirSonic Pro",
+      "sku": "AIRSONIC-WH",
+      "category": "Аксессуары",
+      "priceRub": 2150,
+      "minQty": 20,
+      "stock": 560,
+      "imageUrl": "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f37?auto=format&fit=crop&w=700&q=80",
+      "description": "Беспроводные TWS-наушники, высокий средний чек.",
+      "tags": [
+        "Новинка",
+        "Маркетплейс"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z",
+      "updatedAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "prd_003",
+      "storeId": "store_textile_hub",
+      "name": "Комплект постельного белья сатин",
+      "sku": "SATIN-200-3P",
+      "category": "Текстиль",
+      "priceRub": 1750,
+      "minQty": 10,
+      "stock": 240,
+      "imageUrl": "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=700&q=80",
+      "description": "Размер евро, стабильный повторный спрос.",
+      "tags": [
+        "Премиум"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z",
+      "updatedAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "prd_004",
+      "storeId": "store_textile_hub",
+      "name": "Полотенце махровое 70x140",
+      "sku": "TOWEL-70140-GR",
+      "category": "Дом",
+      "priceRub": 280,
+      "minQty": 50,
+      "stock": 1400,
+      "imageUrl": "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?auto=format&fit=crop&w=700&q=80",
+      "description": "Высокая маржинальность в наборах.",
+      "tags": [
+        "Эконом"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z",
+      "updatedAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "prd_005",
+      "storeId": "store_beauty_pro",
+      "name": "Шампунь PRO Repair 1л",
+      "sku": "BEAUTY-SHAMP-1L",
+      "category": "Уход",
+      "priceRub": 640,
+      "minQty": 30,
+      "stock": 380,
+      "imageUrl": "https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=700&q=80",
+      "description": "Для салонов и студий, повторный закуп каждые 2 недели.",
+      "tags": [
+        "Хит"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z",
+      "updatedAt": "2026-02-07T22:22:31.854Z"
+    },
+    {
+      "id": "prd_006",
+      "storeId": "store_beauty_pro",
+      "name": "Маска Keratin 500мл",
+      "sku": "BEAUTY-MASK-500",
+      "category": "Косметика",
+      "priceRub": 520,
+      "minQty": 40,
+      "stock": 430,
+      "imageUrl": "https://images.unsplash.com/photo-1625772452859-1c03d5bf1137?auto=format&fit=crop&w=700&q=80",
+      "description": "Профессиональная серия для мастеров.",
+      "tags": [
+        "Новинка"
+      ],
+      "createdAt": "2026-02-07T22:22:31.854Z",
+      "updatedAt": "2026-02-07T22:22:31.854Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord_24012",
+      "buyerId": "usr_buyer_01",
+      "storeId": "store_beauty_pro",
+      "status": "shipping",
+      "items": [
+        {
+          "productId": "prd_005",
+          "name": "Шампунь PRO Repair 1л",
+          "sku": "BEAUTY-SHAMP-1L",
+          "qty": 60,
+          "priceRub": 640
+        }
+      ],
+      "subtotalRub": 38400,
+      "deliveryFeeRub": 2000,
+      "totalRub": 40400,
+      "deliveryAddress": "Москва, ул. Складочная, 14",
+      "createdAt": "2026-02-07T22:22:31.854Z",
+      "updatedAt": "2026-02-07T22:22:31.854Z"
+    }
+  ]
+}
