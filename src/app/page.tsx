@@ -318,10 +318,18 @@ export default function Home() {
       setLoading(true);
       setAuthState("loading");
       try {
-        const webApp = window.Telegram?.WebApp;
+        /* Wait for Telegram WebApp script to be ready (may load async) */
+        let webApp = window.Telegram?.WebApp;
+        if (!webApp) {
+          for (let i = 0; i < 20; i++) {
+            await new Promise((r) => setTimeout(r, 150));
+            webApp = window.Telegram?.WebApp;
+            if (webApp) break;
+          }
+        }
 
         /* Check if running inside Telegram */
-        if (!webApp?.initData) {
+        if (!webApp || !webApp.initData) {
           setAuthState("not-telegram");
           setLoading(false);
           return;

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 
 import "./globals.css";
 
@@ -15,8 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
+      <head>
+        <script src="https://telegram.org/js/telegram-web-app.js" />
+      </head>
       <body>
-        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="afterInteractive" />
         {children}
       </body>
     </html>
