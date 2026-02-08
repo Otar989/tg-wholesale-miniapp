@@ -149,7 +149,23 @@ export default function Home() {
   const [checkoutComment, setCheckoutComment] = useState("");
   const [busyAction, setBusyAction] = useState(false);
   const [telegramAvailable, setTelegramAvailable] = useState(false);
-  const [telegramUserLabel, setTelegramUserLabel] = useState("");
+  const [authState, setAuthState] = useState<"loading" | "not-telegram" | "registering" | "authenticated">("loading");
+  const [telegramUser, setTelegramUser] = useState<{id?: number; firstName?: string; lastName?: string; username?: string} | null>(null);
+  const [registrationForm, setRegistrationForm] = useState({
+    role: "buyer" as "buyer" | "seller",
+    fullName: "",
+    phone: "",
+    deliveryAddress: "",
+    storeData: {
+      name: "",
+      city: "",
+      address: "",
+      phone: "",
+      minOrderRub: "10000",
+      deliveryDays: "2",
+      description: "",
+    },
+  });
   const [productDrafts, setProductDrafts] = useState<Record<string, ProductDraft>>({});
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -300,42 +316,63 @@ export default function Home() {
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
+      setAuthState("loading");
       try {
         const webApp = window.Telegram?.WebApp;
-        if (webApp) {
-          setTelegramAvailable(true);
-          webApp.ready();
-          webApp.expand();
-          const username = webApp.initDataUnsafe?.user?.username;
-          const firstName = webApp.initDataUnsafe?.user?.first_name;
-          if (username || firstName) {
-            setTelegramUserLabel(username ? `@${username}` : firstName || "");
-          }
-        }
 
-        const initial = await refreshBootstrap();
-        if (initial.authenticated) {
+        /* Check if running inside Telegram */
+        if (!webApp?.initData) {
+          setAuthState("not-telegram");
+          setLoading(false);
           return;
         }
 
-        if (webApp?.initData) {
-          try {
-            await apiRequest("/api/auth/telegram", {
-              method: "POST",
-              body: JSON.stringify({ initData: webApp.initData }),
-            });
-            await refreshBootstrap();
-            setOk("Успешный вход через Telegram");
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Не удалось войти через Telegram";
-            setError(message);
-          }
+        setTelegramAvailable(true);
+        webApp.ready();
+        webApp.expand();
+
+        /* Check existing session first */
+        const initial = await refreshBootstrap();
+        if (initial.authenticated) {
+          setAuthState("authenticated");
+          return;
         }
+
+        /* Try Telegram auth */
+        const result = await apiRequest<{
+          ok: boolean;
+          registered: boolean;
+          user?: { id: string; role: string; fullName: string };
+          telegramUser?: { id: number; firstName?: string; lastName?: string; username?: string };
+        }>("/api/auth/telegram", {
+          method: "POST",
+          body: JSON.stringify({ initData: webApp.initData }),
+        });
+
+        if (result.registered) {
+          /* Existing user — auto-login */
+          await refreshBootstrap();
+          setAuthState("authenticated");
+          return;
+        }
+
+        /* New user — show registration form */
+        if (result.telegramUser) {
+          setTelegramUser(result.telegramUser);
+          setRegistrationForm((prev) => ({
+            ...prev,
+            fullName:
+              [result.telegramUser!.firstName, result.telegramUser!.lastName]
+                .filter(Boolean)
+                .join(" ") || result.telegramUser!.username || "",
+          }));
+        }
+        setAuthState("registering");
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Не удалось загрузить приложение";
         setError(message);
+        setAuthState("not-telegram");
       } finally {
         setLoading(false);
       }
@@ -344,21 +381,52 @@ export default function Home() {
     void initialize();
   }, []);
 
-  const loginAsDemoRole = async (targetRole: Role) => {
+  const handleRegister = async (e: FormEvent) => {
+    e.preventDefault();
     setBusyAction(true);
     setNotice(null);
     try {
-      await apiRequest("/api/auth/demo-login", {
-        method: "POST",
-        body: JSON.stringify({ role: targetRole }),
-      });
-      const payload = await refreshBootstrap();
-      if (payload.user) {
-        setActiveTab(tabsByRole[payload.user.role][0].id);
+      const webApp = window.Telegram?.WebApp;
+      if (!webApp?.initData) {
+        throw new Error("Telegram data not available");
       }
-      setOk(`Выполнен вход в роль: ${ROLE_TITLE[targetRole]}`);
+
+      const payload: Record<string, unknown> = {
+        initData: webApp.initData,
+        role: registrationForm.role,
+        fullName: registrationForm.fullName.trim(),
+        phone: registrationForm.phone.trim(),
+      };
+
+      if (registrationForm.role === "buyer" && registrationForm.deliveryAddress.trim()) {
+        payload.deliveryAddress = registrationForm.deliveryAddress.trim();
+      }
+
+      if (registrationForm.role === "seller") {
+        payload.storeData = {
+          name: registrationForm.storeData.name.trim(),
+          city: registrationForm.storeData.city.trim(),
+          address: registrationForm.storeData.address.trim(),
+          phone: registrationForm.storeData.phone.trim(),
+          minOrderRub: Math.max(1, Number(registrationForm.storeData.minOrderRub) || 10000),
+          deliveryDays: Math.max(1, Math.floor(Number(registrationForm.storeData.deliveryDays) || 2)),
+          description: registrationForm.storeData.description.trim(),
+        };
+      }
+
+      await apiRequest("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const bootstrap = await refreshBootstrap();
+      if (bootstrap.user) {
+        setActiveTab(tabsByRole[bootstrap.user.role][0].id);
+      }
+      setAuthState("authenticated");
+      setOk("Регистрация успешна! Добро пожаловать!");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Ошибка входа";
+      const message = error instanceof Error ? error.message : "Ошибка регистрации";
       setError(message);
     } finally {
       setBusyAction(false);
@@ -619,54 +687,215 @@ export default function Home() {
     }
   };
 
-  const renderAuth = () => (
-    <div className="auth">
-      <div className="auth-top">
-        <h1 className="hero-title">ОптМаркет РФ в Telegram</h1>
-        <p className="hero-subtitle">
-          Полноценный mini app для B2B‑опта: покупатели, магазины, админка владельца, заказы и
-          ассортимент в одном потоке.
-        </p>
-        <div className="pill-row">
-          <span className="pill">Telegram Mini App</span>
-          <span className="pill">B2B Marketplace</span>
-          <span className="pill">Admin / Seller / Buyer</span>
+  const renderAuth = () => {
+    if (authState === "loading") {
+      return (
+        <div className="auth">
+          <div className="auth-top">
+            <h1 className="hero-title">ОптМаркет РФ</h1>
+            <p className="hero-subtitle">Проверяем вашу учётную запись...</p>
+          </div>
         </div>
-      </div>
-      <div style={{ padding: "20px" }}>
-        <h3 style={{ marginTop: 0 }}>Вход</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
-          {telegramAvailable
-            ? `Telegram WebApp доступен ${telegramUserLabel ? `(${telegramUserLabel})` : ""}.`
-            : "Открыто вне Telegram. Для теста можно войти в демо‑режиме."}
-        </p>
-        <div className="auth-grid">
-          <button className="btn btn-primary" onClick={() => loginAsDemoRole("buyer")}>
-            Демо: Покупатель
-          </button>
-          <button className="btn btn-light" onClick={() => loginAsDemoRole("seller")}>
-            Демо: Магазин
-          </button>
-          <button className="btn btn-light" onClick={() => loginAsDemoRole("admin")}>
-            Демо: Админ
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+      );
+    }
 
-  if (loading) {
+    if (authState === "not-telegram") {
+      return (
+        <div className="auth">
+          <div className="auth-top">
+            <h1 className="hero-title">ОптМаркет РФ</h1>
+            <p className="hero-subtitle">
+              Это приложение работает только внутри Telegram.
+            </p>
+            <p className="hero-subtitle">
+              Откройте бот @marketmall_robot в Telegram и нажмите кнопку «ОптМаркет» внизу чата.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    /* Registration form */
     return (
-      <main className="app-shell">
-        <div className="panel">
-          <h2 className="panel-title">Загрузка...</h2>
-          <p className="muted">Подготавливаем интерфейс mini app.</p>
+      <div className="auth">
+        <div className="auth-top">
+          <h1 className="hero-title">ОптМаркет РФ</h1>
+          <p className="hero-subtitle">
+            B2B‑маркетплейс оптовых товаров. Зарегистрируйтесь, чтобы начать.
+          </p>
         </div>
-      </main>
-    );
-  }
+        <div style={{ padding: "20px" }}>
+          <h3 style={{ marginTop: 0 }}>Регистрация</h3>
+          <form onSubmit={handleRegister}>
+            <div className="auth-grid" style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                className={`btn ${registrationForm.role === "buyer" ? "btn-primary" : "btn-light"}`}
+                onClick={() => setRegistrationForm((p) => ({ ...p, role: "buyer" }))}
+              >
+                Я покупатель
+              </button>
+              <button
+                type="button"
+                className={`btn ${registrationForm.role === "seller" ? "btn-primary" : "btn-light"}`}
+                onClick={() => setRegistrationForm((p) => ({ ...p, role: "seller" }))}
+              >
+                Я хочу продавать
+              </button>
+            </div>
 
-  if (!bootstrap.authenticated || !role || !bootstrap.user) {
+            <input
+              className="field"
+              placeholder="Ваше имя"
+              value={registrationForm.fullName}
+              onChange={(e) => setRegistrationForm((p) => ({ ...p, fullName: e.target.value }))}
+              disabled={busyAction}
+              required
+            />
+            <input
+              className="field"
+              placeholder="Телефон"
+              type="tel"
+              value={registrationForm.phone}
+              onChange={(e) => setRegistrationForm((p) => ({ ...p, phone: e.target.value }))}
+              disabled={busyAction}
+              required
+              style={{ marginTop: 10 }}
+            />
+
+            {registrationForm.role === "buyer" && (
+              <input
+                className="field"
+                placeholder="Адрес доставки (можно указать позже)"
+                value={registrationForm.deliveryAddress}
+                onChange={(e) => setRegistrationForm((p) => ({ ...p, deliveryAddress: e.target.value }))}
+                disabled={busyAction}
+                style={{ marginTop: 10 }}
+              />
+            )}
+
+            {registrationForm.role === "seller" && (
+              <>
+                <div style={{ marginTop: 16, marginBottom: 8 }}>
+                  <strong>Данные магазина</strong>
+                </div>
+                <input
+                  className="field"
+                  placeholder="Название магазина *"
+                  value={registrationForm.storeData.name}
+                  onChange={(e) =>
+                    setRegistrationForm((p) => ({
+                      ...p,
+                      storeData: { ...p.storeData, name: e.target.value },
+                    }))
+                  }
+                  disabled={busyAction}
+                  required
+                />
+                <input
+                  className="field"
+                  placeholder="Город *"
+                  value={registrationForm.storeData.city}
+                  onChange={(e) =>
+                    setRegistrationForm((p) => ({
+                      ...p,
+                      storeData: { ...p.storeData, city: e.target.value },
+                    }))
+                  }
+                  disabled={busyAction}
+                  required
+                  style={{ marginTop: 10 }}
+                />
+                <input
+                  className="field"
+                  placeholder="Адрес склада / офиса"
+                  value={registrationForm.storeData.address}
+                  onChange={(e) =>
+                    setRegistrationForm((p) => ({
+                      ...p,
+                      storeData: { ...p.storeData, address: e.target.value },
+                    }))
+                  }
+                  disabled={busyAction}
+                  style={{ marginTop: 10 }}
+                />
+                <input
+                  className="field"
+                  placeholder="Телефон магазина"
+                  type="tel"
+                  value={registrationForm.storeData.phone}
+                  onChange={(e) =>
+                    setRegistrationForm((p) => ({
+                      ...p,
+                      storeData: { ...p.storeData, phone: e.target.value },
+                    }))
+                  }
+                  disabled={busyAction}
+                  style={{ marginTop: 10 }}
+                />
+                <div className="row" style={{ marginTop: 10 }}>
+                  <input
+                    className="field grow"
+                    placeholder="Мин. заказ (руб)"
+                    type="number"
+                    value={registrationForm.storeData.minOrderRub}
+                    onChange={(e) =>
+                      setRegistrationForm((p) => ({
+                        ...p,
+                        storeData: { ...p.storeData, minOrderRub: e.target.value },
+                      }))
+                    }
+                    disabled={busyAction}
+                  />
+                  <input
+                    className="field grow"
+                    placeholder="Дни доставки"
+                    type="number"
+                    value={registrationForm.storeData.deliveryDays}
+                    onChange={(e) =>
+                      setRegistrationForm((p) => ({
+                        ...p,
+                        storeData: { ...p.storeData, deliveryDays: e.target.value },
+                      }))
+                    }
+                    disabled={busyAction}
+                  />
+                </div>
+                <textarea
+                  className="field"
+                  placeholder="Описание магазина"
+                  value={registrationForm.storeData.description}
+                  onChange={(e) =>
+                    setRegistrationForm((p) => ({
+                      ...p,
+                      storeData: { ...p.storeData, description: e.target.value },
+                    }))
+                  }
+                  disabled={busyAction}
+                  style={{ marginTop: 10 }}
+                />
+              </>
+            )}
+
+            <button
+              className="btn btn-primary"
+              type="submit"
+              disabled={busyAction}
+              style={{ marginTop: 16, width: "100%" }}
+            >
+              {busyAction
+                ? "Регистрация..."
+                : registrationForm.role === "buyer"
+                  ? "Начать покупки"
+                  : "Открыть магазин"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  if (authState !== "authenticated" || !bootstrap.authenticated || !role || !bootstrap.user) {
     return (
       <>
         {renderAuth()}
@@ -1439,7 +1668,6 @@ export default function Home() {
                     >
                       <option value="buyer">Покупатель</option>
                       <option value="seller">Магазин</option>
-                      <option value="admin">Админ</option>
                     </select>
                   </div>
                   <div className="row" style={{ marginTop: 8 }}>

@@ -4,6 +4,8 @@ import { setSessionCookie } from "@/lib/auth";
 import { newId, updateDb } from "@/lib/data-store";
 import { validateTelegramInitData } from "@/lib/telegram";
 
+const ADMIN_TG_ID = 25125327;
+
 export async function POST(request: NextRequest) {
   const { initData } = (await request.json().catch(() => ({}))) as {
     initData?: string;
@@ -33,40 +35,73 @@ export async function POST(request: NextRequest) {
     telegramUser.username ||
     `User ${telegramUser.id}`;
 
-  const user = await updateDb((db) => {
-    const existing = db.users.find((candidate) => candidate.tgId === telegramUser.id);
-    if (existing) {
-      existing.fullName = fullName;
-      return existing;
+  /* ── Admin hardcode: tg_id 25125327 always gets admin role ── */
+  if (telegramUser.id === ADMIN_TG_ID) {
+    const adminUser = await updateDb((db) => {
+      let existing = db.users.find((u) => u.tgId === ADMIN_TG_ID);
+      if (existing) {
+        existing.fullName = fullName;
+        if (existing.role !== "admin") existing.role = "admin";
+        return existing;
+      }
+      const created = {
+        id: newId("usr"),
+        tgId: ADMIN_TG_ID,
+        role: "admin" as const,
+        fullName,
+        phone: "",
+        createdAt: now,
+      };
+      db.users.push(created);
+      return created;
+    });
+
+    const response = NextResponse.json({
+      ok: true,
+      registered: true,
+      user: { id: adminUser.id, role: adminUser.role, fullName: adminUser.fullName },
+    });
+    setSessionCookie(response, {
+      userId: adminUser.id,
+      role: adminUser.role,
+      authMethod: "telegram",
+    });
+    return response;
+  }
+
+  /* ── Regular users: look up by tg_id ── */
+  const existing = await updateDb((db) => {
+    const found = db.users.find((u) => u.tgId === telegramUser.id);
+    if (found) {
+      found.fullName = fullName;
+      return found;
     }
-
-    const created = {
-      id: newId("usr"),
-      tgId: telegramUser.id,
-      role: "buyer" as const,
-      fullName,
-      phone: "",
-      createdAt: now,
-    };
-
-    db.users.push(created);
-    return created;
+    return null;
   });
 
-  const response = NextResponse.json({
+  if (existing) {
+    const response = NextResponse.json({
+      ok: true,
+      registered: true,
+      user: { id: existing.id, role: existing.role, fullName: existing.fullName },
+    });
+    setSessionCookie(response, {
+      userId: existing.id,
+      role: existing.role,
+      authMethod: "telegram",
+    });
+    return response;
+  }
+
+  /* ── New user: return telegram data for registration form ── */
+  return NextResponse.json({
     ok: true,
-    user: {
-      id: user.id,
-      role: user.role,
-      fullName: user.fullName,
+    registered: false,
+    telegramUser: {
+      id: telegramUser.id,
+      firstName: telegramUser.first_name,
+      lastName: telegramUser.last_name,
+      username: telegramUser.username,
     },
   });
-
-  setSessionCookie(response, {
-    userId: user.id,
-    role: user.role,
-    authMethod: "telegram",
-  });
-
-  return response;
 }

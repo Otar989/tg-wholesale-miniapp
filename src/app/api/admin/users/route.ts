@@ -56,6 +56,12 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (payload.role === "admin") {
+      return NextResponse.json(
+        { error: "Admin users cannot be created via this endpoint" },
+        { status: 403 },
+      );
+    }
     if (payload.role === "seller" && !payload.storeId) {
       return NextResponse.json(
         { error: "Seller must have storeId" },
