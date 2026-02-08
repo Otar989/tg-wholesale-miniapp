@@ -47,17 +47,11 @@ export async function POST(request: NextRequest) {
   const telegramUser = verified.data.user;
 
   /* ── Validate fields ── */
-  if (!payload.role || !["buyer", "seller"].includes(payload.role)) {
+  const role = payload.role as string | undefined;
+  if (!role || !["buyer", "seller"].includes(role)) {
     return NextResponse.json(
       { error: "Роль должна быть 'buyer' или 'seller'" },
       { status: 400 },
-    );
-  }
-
-  if (payload.role === "admin") {
-    return NextResponse.json(
-      { error: "Регистрация администратора запрещена" },
-      { status: 403 },
     );
   }
 
